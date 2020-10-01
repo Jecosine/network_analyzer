@@ -1,5 +1,5 @@
 from winpcapy import WinPcapDevices
-from winpcapy import WinPcapUtils, WinPcap
+from winpcapy1.winpcapy import WinPcapUtils, WinPcap
 import winpcapy.winpcapy_types as wtypes
 import os, time
 from colorama import init,Fore,Back,Style
@@ -13,20 +13,29 @@ test_package = b'Xil_\xb3\xea\x00\xd8a\x11Dt\x08\x00E\x00\x01\x14\xeb\xd8\x00\x0
 #   def __init__(self):
 #     self.
 # WinPcapDevices.list_devices()
-class MyPcap:
+class MyPcap(object):
   def __init__(self,device_name, snap_length=65536, promiscuous=1, timeout=1000):
-    self.pcap = WinPcap(device_name)
-    self.pcap.__enter__()
+    self.device_name = device_name
+    self.pcap = None
     self._handler = None
+    self.pcap_pkthdr = wtypes.pcap_pkthdr()
   def listener(self, handler):
-    self.pcap._callback = self._handler = handler
+    self._handler = handler
   def open(self, name):
     self.pcap._name = name
     self.pcap.__enter__()
   def run(self):
-    if not self._handler:
-      print("\033[30;1m ERROR: No handler")
-    self.pcap.run(self._handler)
+    device_real_name, desc = WinPcapDevices.get_matching_device(self.device_name)
+    with WinPcap(device_real_name) as capture:
+      if not self._handler:
+        print("\033[30;1m ERROR: No handler")
+      else:
+        capture.run(callback=self._handler, limit=5)
+  def next(self):
+    # if not self._handler:
+      # print("\033[30;1m ERROR: No handler")
+    s = wtypes.pcap_next(callback=self.pcap._handle, limit=self.pcap_pkthdr)
+    print(s)
   def stop(self):
     self.pcap.stop()
   def close(self):
@@ -42,53 +51,70 @@ def pkg_callback(win_pcap, param, header, pkt_data):
   # else:
   #   with open("x.bin", 'wb') as f:
   #     f.write(pkt_data)
-  print(pkt_data)
+  # print(pkt_data)
   print("-------------------")
 
+# mp.listener(pkg_callback)
+mp.run()
 
-class myThread (threading.Thread): 
-    def __init__(self, threadID, name, counter):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.counter = counter
-        self.stop = False
-    def terminate(self):
-        self.stop = True
-    def pkg_callback(self, win_pcap, param, header, pkt_data):
-      self.counter += 1
-      if(self.counter > 5):
-        return
-      time.sleep(5)
-      print(pkt_data)
-      if(os.path.exists("x.bin")):
-        self.terminate = True
-        pass
-      else:
-        with open("x.bin", 'wb') as f:
-          f.write(pkt_data)
-    def run(self):  
-        print("Starting " + self.name)
-        devices = list(WinPcapDevices.list_devices().values())[0]
-        WinPcapUtils.capture_on(pattern=devices, callback=self.pkg_callback)
-        print( "Exiting " + self.name)
+# with WinPcap(DEVICE) as capture:
+            # capture.run(callback=pkg_callback)
+# def capture_on(pattern, callback):
+#         """
+#         :param pattern: a wildcard pattern to match the description of a network interface to capture packets on
+#         :param callback: a function to call with each intercepted packet
+#         """
+#         device_name, desc = WinPcapDevices.get_matching_device(pattern)
+#         print(type(device_name), device_name)
+#         if device_name is not None:
+#             with WinPcap(device_name) as capture:
+#                 capture.run(callback=callback, limit=5)
+
+# capture_on(DEVICE, pkg_callback)
+
+# class myThread (threading.Thread): 
+#     def __init__(self, threadID, name, counter):
+#         threading.Thread.__init__(self)
+#         self.threadID = threadID
+#         self.name = name
+#         self.counter = counter
+#         self.stop = False
+#     def terminate(self):
+#         self.stop = True
+#     def pkg_callback(self, win_pcap, param, header, pkt_data):
+#       self.counter += 1
+#       if(self.counter > 5):
+#         return
+#       time.sleep(5)
+#       print(pkt_data)
+#       if(os.path.exists("x.bin")):
+#         self.terminate = True
+#         pass
+#       else:
+#         with open("x.bin", 'wb') as f:
+#           f.write(pkt_data)
+#     def run(self):  
+#         print("Starting " + self.name)
+#         devices = list(WinPcapDevices.list_devices().values())[0]
+#         WinPcapUtils.capture_on(pattern=devices, callback=self.pkg_callback)
+#         print( "Exiting " + self.name)
 
 
 
-class A:
-  def __init__(self):
-    self.handler = None
-  def listener(self, handler):
-    self.handler = handler
-  def run(self):
-    if not self.handler:
-      print("ERROR")
-    else:
-      self.handler()
+# class A:
+#   def __init__(self):
+#     self.handler = None
+#   def listener(self, handler):
+#     self.handler = handler
+#   def run(self):
+#     if not self.handler:
+#       print("ERROR")
+#     else:
+#       self.handler()
 
-app = A()
-@app.listener
-def myhandler():
-  print("Im handler!")
+# app = A()
+# @app.listener
+# def myhandler():
+#   print("Im handler!")
 
-app.run()
+# app.run()

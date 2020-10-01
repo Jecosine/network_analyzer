@@ -168,7 +168,7 @@ class WinPcapUtils(object):
         device_name, desc = WinPcapDevices.get_matching_device(pattern)
         if device_name is not None:
             with WinPcap(device_name) as capture:
-                capture.run(callback=callback)
+                capture.run(callback=callback, limit=5)
 
     @staticmethod
     def capture_on_device_name(device_name, callback):
@@ -177,7 +177,7 @@ class WinPcapUtils(object):
         :param callback: a function to call with each intercepted packet
         """
         with WinPcap(device_name) as capture:
-            capture.run(callback=callback)
+            capture.run(callback=callback, limit=5)
 
     @classmethod
     def capture_on_and_print(cls, pattern):
