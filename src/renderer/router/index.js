@@ -13,6 +13,10 @@ export default new Router({
     {
       path: '*',
       redirect: '/'
+    },{
+      path: '/data',
+      name: 'data-page'
+      // component: require('@/components/')
     }
   ]
 })
