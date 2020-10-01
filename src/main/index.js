@@ -1,4 +1,9 @@
-import { app, BrowserWindow } from 'electron'
+/*
+ * @Date: 2020-09-30 08:50:47
+ * @LastEditors: Jecosine
+ * @LastEditTime: 2020-09-30 16:28:15
+ */
+import { app, BrowserWindow, Menu } from 'electron'
 
 /**
  * Set `__static` path to static files in production
@@ -13,6 +18,7 @@ const winURL = process.env.NODE_ENV === 'development'
   ? `http://localhost:9080`
   : `file://${__dirname}/index.html`
 
+
 function createWindow () {
   /**
    * Initial window options
@@ -20,7 +26,9 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     height: 563,
     useContentSize: true,
-    width: 1000
+    width: 1000,
+    // remove native navigation bar
+    frame: false
   })
 
   mainWindow.loadURL(winURL)
