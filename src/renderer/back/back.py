@@ -173,7 +173,7 @@ class MyPcap(object):
     def close(self):
         self.pcap.__exit__(None, None, None)
 package_queue = []
-mp = MyPcap("Intel(R) Ethernet Connection (2) I219-V")
+# mp = MyPcap("Intel(R) Ethernet Connection (2) I219-V")
 con = None
 t1 = None
 class myThread(threading.Thread):
@@ -210,10 +210,12 @@ class myThread(threading.Thread):
 #     time.sleep(1)
 #     print("Connecting...")
 
-
+def onmessage(ws, msg):
+  if msg.
 def mainprocess():
     global package_queue, mp, con, t1
     con = ws.create_connection("ws://127.0.0.1:8082/")
+    mp = MyPcap("Intel(R) Ethernet Connection (2) I219-V")
     mp.run()
     con.close()
         # mp.run()
@@ -227,12 +229,6 @@ def pkg_callback(win_pcap, param, header, pkt_data):
     con.send(p._ip_header())
     print(p._ip_header())
     print(pkt_data)
-    # if(os.path.exists("x.bin")):
-    #   pass
-    # else:
-    #   with open("x.bin", 'wb') as f:
-    #     f.write(pkt_data)
-    # print(pkt_data)
     print("-------------------")
 
 

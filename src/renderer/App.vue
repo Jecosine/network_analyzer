@@ -5,9 +5,6 @@
 -->
 <template>
   <div id="app">
-    <div id="navigation-container">
-        <h1><a href="/data">Test</a></h1>
-    </div>
     <router-view></router-view>
   </div>
 </template>

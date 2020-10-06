@@ -158,7 +158,7 @@ class WinPcapUtils(object):
         except KeyboardInterrupt:
             win_pcap.stop()
             sys.exit(0)
-
+    
     @staticmethod
     def capture_on(pattern, callback):
         """
