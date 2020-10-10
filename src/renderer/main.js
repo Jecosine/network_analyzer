@@ -1,7 +1,7 @@
 /*
  * @Date: 2020-09-30 08:50:47
  * @LastEditors: Jecosine
- * @LastEditTime: 2020-09-30 17:26:20
+ * @LastEditTime: 2020-10-10 15:56:03
  */
 import Vue from 'vue'
 import axios from 'axios'
@@ -11,7 +11,7 @@ import router from './router'
 import store from './store'
 
 // import from antdesign
-import {DataPicker} from 'ant-design-vue'
+import Antd from 'ant-design-vue'
 import 'ant-design-vue/dist/antd.css'
 
 if (!process.env.IS_WEB) Vue.use(require('vue-electron'))
@@ -23,6 +23,5 @@ Vue.use(Antd)
 new Vue({
   components: { App },
   router,
-  store,
   template: '<App/>'
 }).$mount('#app')
