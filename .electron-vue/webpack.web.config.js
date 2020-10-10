@@ -25,9 +25,23 @@ let webConfig = {
             {
                 test: /\.sass$/,
                 use: [
-                    "vue-style-loader",
-                    "css-loader",
-                    "sass-loader?indentedSyntax",
+                    { loader: "vue-style-loader" },
+                    { loader: "css-loader" },
+                    { 
+                        loader: "less-loader",
+                        options: {
+                        lessOptions: {
+                            modifyVars: {
+                            'primary-color': '#08979c',
+                            'link-color': '#08979c',
+                            'border-radius-base': '2px',
+                            },
+                            javascriptEnabled: true,
+                        }
+                        }
+                    },
+                    { loader: "sass-loader?indentedSyntax" }
+                    
                 ],
             },
             {

@@ -10,18 +10,24 @@ import App from './App'
 import router from './router'
 import store from './store'
 
+
+
 // import from antdesign
-import Antd from 'ant-design-vue'
-import 'ant-design-vue/dist/antd.css'
+import {DatePicker} from 'ant-design-vue'
+// import 'ant-design-vue/dist/antd.css'
+
+const path = require('path')
 
 if (!process.env.IS_WEB) Vue.use(require('vue-electron'))
 Vue.http = Vue.prototype.$http = axios
 Vue.config.productionTip = false
-Vue.use(Antd)
-
+Vue.use(DatePicker)
+console.log(__dirname)
 /* eslint-disable no-new */
-new Vue({
+const app = new Vue({
+  el: '#app',
+  
   components: { App },
   router,
   template: '<App/>'
-}).$mount('#app')
+});
