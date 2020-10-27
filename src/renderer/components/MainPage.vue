@@ -43,14 +43,31 @@
             </a-menu-item-group>
           </a-sub-menu>
           <a-sub-menu key="help">
-            <span slot="title" class="submenu-title-wrapper"
-              ><a-icon type="question-circle" />Help</span
-            >
+            <span slot="title" class="submenu-title-wrapper">
+              <a-icon type="question-circle" />Help</span>
           </a-sub-menu>
         </a-menu>
       </a-layout-header>
     </a-affix>
     <a-layout-content>
+      <div id="toolbar">
+        <a-input-search id="filter-container" placeholder="Filter the packets" style="width: 200px" @search="onSearch">
+          <a-icon slot="prefix" type="filter" />
+        </a-input-search>
+        <a-dropdown id="selector-container">
+          <a-menu slot="overlay" @click="handleMenuClick">
+            <a-menu-item key="1"> <a-icon type="user" />1st menu item </a-menu-item>
+            <a-menu-item key="2"> <a-icon type="user" />2nd menu item </a-menu-item>
+            <a-menu-item key="3"> <a-icon type="user" />3rd item </a-menu-item>
+          </a-menu>
+          <a-button style="margin-left: 8px"> Button <a-icon type="down" /> </a-button>
+        </a-dropdown>
+        <a-button-group id="tool-group">
+          <a-button :icon="isPause?'caret-right':'pause'" />
+          <a-button style="color:red" icon="close" />
+          
+        </a-button-group> 
+      </div>
       <div
         :style="{
           background: '#fefefe',
@@ -115,7 +132,7 @@ const _columns = [
   {
     dataIndex: "frame_type",
     key: "frame_type",
-    default: 'Ethernet II',
+    default: "Ethernet II",
     slots: { title: "customTitle" },
     scopedSlots: { customRender: "name" },
   },
@@ -247,7 +264,7 @@ export default {
     server: {
       type: Object,
       default: null,
-      packageData: []
+      packageData: [],
     },
   },
   data() {
@@ -258,10 +275,14 @@ export default {
       collapsed: false,
       counter: 10,
       reachBottom: false,
+      isPause: true
     };
   },
   // components: { SystemInformation },
   methods: {
+    handleMenuClick(e) {
+      console.log('click', e);
+    },
     onMessage: function(msg, con) {
       console.log("(MP)RECV: ", msg);
       msg = JSON.parse(msg);
@@ -311,13 +332,13 @@ export default {
     // bind server
     that.server.on("connection", (con) => {
       console.log("A connection come(Real)");
-      console.log(that.server)
+      console.log(that.server);
       // console.log("Sever connections = ", that.server.connections.length);
       //when a new message has been received.
       con.on("message", function(msg) {
         // that.onMessage(msg, con);
         console.log(msg);
-        that.tableData.push(JSON.parse(msg))
+        that.tableData.push(JSON.parse(msg));
         if (that.reachBottom) {
           that.toBottom();
         }
@@ -357,6 +378,8 @@ export default {
 </script>
 
 <style>
+
+
 #main-table {
   height: calc(100vh - 110px);
 }
@@ -404,5 +427,30 @@ export default {
 #components-layout-demo-basic .ant-layout-content {
   position: relative;
   top: 70px;
+}
+#toolbar {
+  display: flex;
+  flex-direction: row;
+  width: calc(100% - 20px);
+  padding-left: 10px;
+  padding-right: 10px;
+  height: 40px;
+  line-height: 40px;
+}
+#filter-container {
+  /* line-height: 40px; */
+  height: 30px;
+  margin: 5px;
+  vertical-align: middle;
+}
+
+#selector-container {
+  height: 30px;
+  margin: 5px;
+  /* line-height: 40px; */
+
+}
+#tool-group {
+  height: 30px;
 }
 </style>
