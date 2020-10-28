@@ -63,18 +63,19 @@ class Sniffer:
 
 
 sniffer = Sniffer()
-
-
 @sniffer.handler
 def mhandler(x):
     time.sleep(2)
-    # x.show()
     p = PKG(raw(x))
     print("===Ether===")
     print(p.ethernet_header)
-    print("===IP===")
-    print(p.ipv4 if p.ip_version == 4 else p.ipv6)
+    if p.ip_version:
+        print("===IP===")
+        print(p.ipv4 if p.ip_version == 4 else p.ipv6)
+    elif p.frame_type == "arp":
+        print("===ARP===")
+        print(p.arp)
 
 
-sniffer.start_sniffer(22)
+sniffer.start_sniffer(3)
 # sniff(prn=handler, count=5)

@@ -1,3 +1,4 @@
+# from typing import Protocol
 import protocol_types as p_types
 import json
 # class EtherPackage()
@@ -48,7 +49,10 @@ class Package:
     
     def parse(self):
         self.parse_ethernet()
-        self.parse_ip()
+        if self.frame_type in ["ipv4", "ipv6"]:
+            self.parse_ip()
+        elif self.frame_type == "arp":
+            self.parse_arp()
 
 
     @staticmethod
@@ -160,6 +164,10 @@ class Package:
             "option": self._to_hex_str(self.option_padding),
             "data": self._to_hex_str(self.ip_data),
         }
+        if self.proto == 6:
+            self.parse_tcp(self.ip_data)
+        elif self.proto == 17:
+            self.parse_udp(self.ip_data)
         return self.ipv4
 
     def parse_ipv6(self, pkg):
@@ -192,4 +200,73 @@ class Package:
         return self.ipv6
     
     def parse_arp(self, pkg):
-        pass
+        hwtype = int.from_bytes(pkg[0:2]) # hardware type
+        ptype = int.from_bytes(pkg[2:4]) # protocol type
+        hwlen = pkg[4] # hardware address length
+        plen = pkg[5] # protocol address length
+        op = int.from_bytes(pkg[6:8])
+        hwsrc = self.parse_ipv6_addr(pkg[8:14]) # hw src
+        psrc = self.parse_ipv4_addr(pkg[14:18]) # ip src
+        hwdst = self.parse_ipv6_addr(pkg[18:24]) # hw dst
+        pdst = self.parse_ipv4_addr(pkg[24:28]) # ip dst
+        self.arp = {
+            "hwtype": hwtype,
+            "ptype": ptype,
+            "hwlen": hwlen,
+            "plen": plen,
+            "op": op,
+            "hwsrc": hwsrc,
+            "psrc": psrc,
+            "hwdst": hwdst,
+            "pdst": pdst
+        }
+        return self.arp
+
+    def parse_udp(self, pkg):
+        sport = pkg[0:2]
+        dport = pkg[2:4]
+        ulen = pkg[4:6]
+        chksum = pkg[6:8]
+        data = pkg[8:]
+        self.ipv4["UDP"] = {
+            "sport": int.from_bytes(sport, "big"),
+            "dport": int.from_bytes(dport, "big"),
+            "len": int.from_bytes(ulen, "big"),
+            "chksum": str(bin(int.from_bytes(chksum, "big"))),
+            "data": self._to_hex_str(data)
+        }
+    def get_tcp_flag(self, flag):
+        t = ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ERR']
+        cnt = 0
+        while (not (flag & 1)) and cnt < 6:
+            flag >>= 1
+            cnt += 1
+        return t[cnt]
+
+
+    def parse_tcp(self, pkg):
+        sport = pkg[0:2]
+        dport = pkg[2:4]
+        seq = pkg[4:8]
+        ack = pkg[8:12]
+        dataofs = pkg[12] >> 4
+        reserved = (pkg[13] & 15) << 2 | (pkg[14] >> 6)
+        flags = self.get_tcp_flag(pkg[14] & ((1 << 7) - 1))
+        window = pkg[14: 16]
+        chksum = pkg[16: 18]
+        urgptr = pkg[18: 20]
+        options = pkg[20: dataofs << 4]
+        data = pkg[dataofs << 4:]
+        self.ipv4["tcp"] = {
+            "sport": sport,
+            "dport": dport,
+            "seq": seq,
+            "ack": ack,
+            "dataofs": dataofs,
+            "reserved": reserved,
+            "flags": flags,
+            "chksum": chksum,
+            "urgptr": urgptr,
+            "options": options,
+            "data": data
+        }
