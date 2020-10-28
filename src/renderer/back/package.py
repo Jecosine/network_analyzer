@@ -1,5 +1,6 @@
 import protocol_types as p_types
 import json
+# class EtherPackage()
 class Package:
     def __init__(self, raw_data):
         # data link layer
@@ -10,7 +11,7 @@ class Package:
             33024: "802.1Q",
             34525: "ipv6",
         }
-        self.frame_header, self.frame_tail = raw_data[:14], raw_data[-4:]
+        self.frame_header, self.frame_tail, self.frame_head_length = raw_data[:14], raw_data[-4:], int.from_bytes(raw_data[12:14], "big")
         self.frame_type = self.frame_type_dict.get(
             int.from_bytes(self.frame_header[12:14], "big")
         )
@@ -38,21 +39,32 @@ class Package:
         self.len = None  # UDP数据包长度(Datagram length)
         self.crc = None  # 校验和(Checksum)
 
+        
+        self.ethernet_header = None
+        self.ipv4 = None
+        self.ipv6 = None
+        self.arp = None
         self.parse()
+    
+    def parse(self):
+        self.parse_ethernet()
+        self.parse_ip()
+
 
     @staticmethod
-    def parse_ip(ip_raw):
+    def parse_ipv4_addr(ip_raw):
         return ".".join([str(i) for i in ip_raw])
 
-    # return frame header information
     def _frame_header(self):
-        frame = {
+        self.ethernet_header = {
             "source_mac": self.smac,
             "destination_src": self.dmac,
             "frame_type": self.frame_type,
+            "frame_head_length": self.frame_head_length,
             "frame_check_sequence": bin(int.from_bytes(self.frame_tail, "big")),
+
         }
-        return json.dumps(frame)
+        # return json.dumps(frame)
 
     @staticmethod
     def _to_int_str(b):
@@ -61,7 +73,9 @@ class Package:
     @staticmethod
     def _to_hex_str(b):
         return " ".join([hex(i)[2:].zfill(2) for i in b])
-
+    @staticmethod
+    def _to_hex(b):
+        return [hex(i)[2:].zfill(2) for i in b]
     @staticmethod
     def get_protocol(protocol):
         return (
@@ -69,7 +83,7 @@ class Package:
             if not p_types.protocols.get(protocol)
             else p_types.protocols.get(protocol)
         )
-    # return ip header information
+
     def _ip_header(self):
         ip = {
             "ip_version": self.ip_version,
@@ -82,8 +96,8 @@ class Package:
             "time_to_live": self.ttl,
             "protocol": self.get_protocol(self.proto),
             "header_checksum": str(bin(self.crc)),
-            "source_address": self.parse_ip(self.saddr),
-            "destination_address": self.parse_ip(self.daddr),
+            "source_address": self.parse_ipv4_addr(self.saddr),
+            "destination_address": self.parse_ipv4_addr(self.daddr),
             "option": self._to_hex_str(self.option_padding),
             "data": self._to_hex_str(self.ip_data),
         }
@@ -94,15 +108,27 @@ class Package:
         if len(raw) != 6:
             return ""
         return ":".join([hex(i)[2:].zfill(2) for i in raw])
-
-    def parse(self):
+    @staticmethod
+    def parse_ipv6_addr(addr):
+        return ":".join([self._to_hex(addr[i:i+4]) for i in range(0, len(addr), 4)])
+    def parse_ethernet(self):
         # frame head parsing
-        self.dmac, self.smac = self.parse_mac(self.frame_header[:6]), self.parse_mac(
-            self.frame_header[6:12]
-        )
-
+        self.dmac, self.smac = self.parse_mac(self.frame_header[:6]), self.parse_mac(self.frame_header[6:12])
+        self._frame_header()
+    def parse_ip(self):
         # ip package head parsing
-        self.ip_version, self.ihl = self.ip_package[0] >> 4, self.ip_package[0] & 15
+        self.ip_version = self.ip_package[0] >> 4
+        if self.ip_version == 4:
+            self.parse_ipv4(self.ip_package)
+        elif self.ip_version == 6:
+            self.parse_ipv6(self.ip_package)
+        else:
+            pass
+
+
+    def parse_ipv4(self, pkg):
+        self.ipv4 = {"ip_version": 4}
+        self.ihl = self.ip_package[0] & 15
         self.tos = self.ip_package[1]
         self.tlen_raw = self.ip_package[2:4]
         self.tlen = int.from_bytes(self.tlen_raw, "big")
@@ -118,3 +144,52 @@ class Package:
         self.option_padding = self.ip_package[20 : self.ihl << 2]
         self.ip_data = self.ip_package[(self.ihl << 2) :]
         # parse data
+        self.ipv4 = {
+            "ip_version": 4,
+            "ip_head_length": self.ihl,
+            "type_of_service": self.tos,
+            "tlen": self.tlen,
+            "identification": self._to_hex_str(self.identification),
+            "flags": self.flags,
+            "fragment_offset": self.offset,
+            "time_to_live": self.ttl,
+            "protocol": self.get_protocol(self.proto),
+            "header_checksum": str(bin(self.crc)),
+            "source_address": self.parse_ipv4_addr(self.saddr),
+            "destination_address": self.parse_ipv4_addr(self.daddr),
+            "option": self._to_hex_str(self.option_padding),
+            "data": self._to_hex_str(self.ip_data),
+        }
+        return self.ipv4
+
+    def parse_ipv6(self, pkg):
+        # traffic class
+        tc = ((pkg[0] & 0b1111) << 4) | (pkg[1] >> 4)
+        # flow label
+        fl = (pkg[1] & 0b1111).to_bytes(1, 'big') + pkg[2:4]
+        # payload length
+        plen = int.from_bytes(pkg[4:6])
+        # next header
+        nh = pkg[6]
+        # hop limit
+        hlim = pkg[7]
+        # source 
+        src = pkg[8:24]
+        # destination
+        dst = pkg[24:40]
+        # data
+        data = pkg[40:]
+        self.ipv6 = {
+            "tc": tc,
+            "fl": fl,
+            "plen": plen,
+            "nh": nh,
+            "hlim": hlim,
+            "src": self.parse_ipv6_addr(src),
+            "dst":self.parse_ipv4_addr(dst),
+            "data": self._to_hex_str(data)
+        }
+        return self.ipv6
+    
+    def parse_arp(self, pkg):
+        pass
