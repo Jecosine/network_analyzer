@@ -1,12 +1,14 @@
 '''
 Date: 2020-10-11 16:37:41
 LastEditors: Jecosine
-LastEditTime: 2020-10-14 17:26:24
+LastEditTime: 2020-10-28 17:05:18
 '''
 from scapy.all import *
 import time
+import ipaddress
 import os
 import json
+import websocket as ws
 from package import Package as PKG
 # import flask
 
@@ -33,17 +35,34 @@ class Sniffer:
 
     def get_dump_devices(self):
         return json.dumps(self.devices)
-
+    def pause_sniffer(self):
+        if self.sniffer != None:
+            self.sniffer.stop()
     def start_sniffer(self, win_index, filter=None, store=False, count=None):
         if not self._handler:
             print("[ERROR]: handler not specified")
+        if self.sniffer != None:
+            self.start_sniffer()
+            return
         device_name = self.get_device_name(win_index)
         self.sniffer = AsyncSniffer(
-            iface=device_name, filter=filter, store=store, prn=self._handler, count=10)
+            iface=device_name, filter=filter, store=store, prn=self._handler)
         self.sniffer.start()
-        self.sniffer.join()
-        # self.sniffer.stop()
+        # self.sniffer.join()
+    def stop_sniffer(self):
+        try:
+            self.sniffer.stop()
+        except Exception as e:
+            print(e)
+    def close_sniffer(self):
+        try:
+            self.sniffer.stop()
+            self.sniffer = None
+        except Exception as e:
+            print(e)
+            self.sniffer = None
 
+        
     def set_handler(self, raw_handler):
         try:
             _ = compile(raw_handler, "", "exec")
@@ -61,21 +80,3 @@ class Sniffer:
             return False
         return True
 
-
-sniffer = Sniffer()
-@sniffer.handler
-def mhandler(x):
-    time.sleep(2)
-    p = PKG(raw(x))
-    print("===Ether===")
-    print(p.ethernet_header)
-    if p.ip_version:
-        print("===IP===")
-        print(p.ipv4 if p.ip_version == 4 else p.ipv6)
-    elif p.frame_type == "arp":
-        print("===ARP===")
-        print(p.arp)
-
-
-sniffer.start_sniffer(3)
-# sniff(prn=handler, count=5)

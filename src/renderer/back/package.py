@@ -1,6 +1,7 @@
 # from typing import Protocol
 import protocol_types as p_types
 import json
+import ipaddress
 # class EtherPackage()
 class Package:
     def __init__(self, raw_data):
@@ -52,7 +53,7 @@ class Package:
         if self.frame_type in ["ipv4", "ipv6"]:
             self.parse_ip()
         elif self.frame_type == "arp":
-            self.parse_arp()
+            self.parse_arp(self.ip_package)
 
 
     @staticmethod
@@ -79,9 +80,9 @@ class Package:
         return " ".join([hex(i)[2:].zfill(2) for i in b])
     @staticmethod
     def _to_hex(b):
-        return [hex(i)[2:].zfill(2) for i in b]
-    @staticmethod
-    def get_protocol(protocol):
+        return ''.join([hex(i)[2:].zfill(2) for i in b])
+    
+    def get_protocol(self, protocol):
         return (
             p_types.unassigned
             if not p_types.protocols.get(protocol)
@@ -107,14 +108,13 @@ class Package:
         }
         return json.dumps(ip)
 
-    @staticmethod
-    def parse_mac(raw):
+    def parse_mac(self, raw):
         if len(raw) != 6:
             return ""
         return ":".join([hex(i)[2:].zfill(2) for i in raw])
-    @staticmethod
-    def parse_ipv6_addr(addr):
-        return ":".join([self._to_hex(addr[i:i+4]) for i in range(0, len(addr), 4)])
+
+    def parse_ipv6_addr(self, addr):
+        return ipaddress.IPv6Address(":".join([self._to_hex(addr[i:i+2]) for i in range(0, len(addr), 2)])).compressed
     def parse_ethernet(self):
         # frame head parsing
         self.dmac, self.smac = self.parse_mac(self.frame_header[:6]), self.parse_mac(self.frame_header[6:12])
@@ -150,17 +150,17 @@ class Package:
         # parse data
         self.ipv4 = {
             "ip_version": 4,
-            "ip_head_length": self.ihl,
-            "type_of_service": self.tos,
-            "tlen": self.tlen,
-            "identification": self._to_hex_str(self.identification),
+            "ihl": self.ihl,
+            "tos": self.tos,
+            "len": self.tlen,
+            "id": self._to_hex_str(self.identification),
             "flags": self.flags,
-            "fragment_offset": self.offset,
-            "time_to_live": self.ttl,
+            "frag": self.offset,
+            "ttl": self.ttl,
             "protocol": self.get_protocol(self.proto),
             "header_checksum": str(bin(self.crc)),
-            "source_address": self.parse_ipv4_addr(self.saddr),
-            "destination_address": self.parse_ipv4_addr(self.daddr),
+            "src": self.parse_ipv4_addr(self.saddr),
+            "dst": self.parse_ipv4_addr(self.daddr),
             "option": self._to_hex_str(self.option_padding),
             "data": self._to_hex_str(self.ip_data),
         }
@@ -168,6 +168,8 @@ class Package:
             self.parse_tcp(self.ip_data)
         elif self.proto == 17:
             self.parse_udp(self.ip_data)
+        self.ethernet_header["src"] = self.parse_ipv4_addr(self.saddr)
+        self.ethernet_header["dst"] = self.parse_ipv4_addr(self.daddr)
         return self.ipv4
 
     def parse_ipv6(self, pkg):
@@ -176,7 +178,7 @@ class Package:
         # flow label
         fl = (pkg[1] & 0b1111).to_bytes(1, 'big') + pkg[2:4]
         # payload length
-        plen = int.from_bytes(pkg[4:6])
+        plen = int.from_bytes(pkg[4:6], 'big')
         # next header
         nh = pkg[6]
         # hop limit
@@ -189,37 +191,45 @@ class Package:
         data = pkg[40:]
         self.ipv6 = {
             "tc": tc,
-            "fl": fl,
+            "fl": self._to_hex_str(fl),
+            "len": plen,
             "plen": plen,
             "nh": nh,
             "hlim": hlim,
             "src": self.parse_ipv6_addr(src),
-            "dst":self.parse_ipv4_addr(dst),
+            "dst":self.parse_ipv6_addr(dst),
             "data": self._to_hex_str(data)
         }
+        self.ethernet_header["src"] = self.ipv6["src"]
+        self.ethernet_header["dst"] = self.ipv6["dst"]
         return self.ipv6
     
     def parse_arp(self, pkg):
-        hwtype = int.from_bytes(pkg[0:2]) # hardware type
-        ptype = int.from_bytes(pkg[2:4]) # protocol type
+        hwtype = int.from_bytes(pkg[0:2], 'big') # hardware type
+        ptype = int.from_bytes(pkg[2:4], 'big') # protocol type
         hwlen = pkg[4] # hardware address length
         plen = pkg[5] # protocol address length
-        op = int.from_bytes(pkg[6:8])
-        hwsrc = self.parse_ipv6_addr(pkg[8:14]) # hw src
+        op = int.from_bytes(pkg[6:8], 'big')
+        hwsrc = self.parse_mac(pkg[8:14]) # hw src
         psrc = self.parse_ipv4_addr(pkg[14:18]) # ip src
-        hwdst = self.parse_ipv6_addr(pkg[18:24]) # hw dst
+        hwdst = self.parse_mac(pkg[18:24]) # hw dst
         pdst = self.parse_ipv4_addr(pkg[24:28]) # ip dst
         self.arp = {
             "hwtype": hwtype,
             "ptype": ptype,
             "hwlen": hwlen,
             "plen": plen,
+            "len": len(pkg),
             "op": op,
             "hwsrc": hwsrc,
             "psrc": psrc,
+            "src": psrc,
             "hwdst": hwdst,
-            "pdst": pdst
+            "pdst": pdst,
+            "dst": pdst
         }
+        self.ethernet_header["src"] = psrc
+        self.ethernet_header["dst"] = pdst if pdst!= '' else 'BROADCAST'
         return self.arp
 
     def parse_udp(self, pkg):
@@ -243,7 +253,8 @@ class Package:
             cnt += 1
         return t[cnt]
 
-
+    def _to_int(self, b):
+        return int.from_bytes(b, 'big')
     def parse_tcp(self, pkg):
         sport = pkg[0:2]
         dport = pkg[2:4]
@@ -258,15 +269,16 @@ class Package:
         options = pkg[20: dataofs << 4]
         data = pkg[dataofs << 4:]
         self.ipv4["tcp"] = {
-            "sport": sport,
-            "dport": dport,
-            "seq": seq,
-            "ack": ack,
+            "sport": self._to_int(sport),
+            "dport": self._to_int(dport),
+            "seq": self._to_int(seq),
+            "ack": self._to_int(ack),
             "dataofs": dataofs,
             "reserved": reserved,
             "flags": flags,
-            "chksum": chksum,
-            "urgptr": urgptr,
-            "options": options,
-            "data": data
+            "windows": self._to_int(window),
+            "chksum": self._to_int(chksum),
+            "urgptr": self._to_int(urgptr),
+            "options": self._to_hex_str(options),
+            "data": self._to_hex_str(data)
         }

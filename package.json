@@ -52,11 +52,11 @@
   },
   "dependencies": {
     "ant-design-vue": "^1.6.5",
-    "axios": "^0.18.0",
+    "axios": "^0.18.1",
+    "babel-plugin-component": "^1.1.1",
     "bufferutil": "^4.0.1",
     "nodejs-websocket": "^1.7.2",
     "utf-8-validate": "^5.0.2",
-    "babel-plugin-component": "^1.1.1",
     "vue": "^2.5.16",
     "vue-electron": "^1.0.6",
     "vue-router": "^3.0.1",
