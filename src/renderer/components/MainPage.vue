@@ -439,7 +439,7 @@ export default {
     },
     created: function() {
         const that = this;
-        this.$axios.get("/start?no=22", {}).then((res) => {
+        this.$axios.get("/start?no=3", {}).then((res) => {
             console.log(res);
         });
         this.$axios.get("/getInterface", {}).then((res) => {
