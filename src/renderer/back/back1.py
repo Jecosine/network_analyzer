@@ -1,7 +1,7 @@
 '''
 Date: 2020-10-11 16:37:41
-LastEditors: Jecosine
-LastEditTime: 2020-10-28 17:05:18
+LastEditors: Please set LastEditors
+LastEditTime: 2020-12-02 16:54:39
 '''
 from scapy.all import *
 import time
@@ -42,7 +42,7 @@ class Sniffer:
         if not self._handler:
             print("[ERROR]: handler not specified")
         if self.sniffer != None:
-            self.start_sniffer()
+            self.sniffer.start()
             return
         device_name = self.get_device_name(win_index)
         self.sniffer = AsyncSniffer(

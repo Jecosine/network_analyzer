@@ -334,13 +334,15 @@ export default {
         onVisibleChange: function(visible)
         {
             console.log(visible);
+            this.currentInterface = "Ethernet"
+
         },
         onStart: function() {
             const that = this;
             if(that.isPause)
             {
                 this.loading_start = true;
-                this.$axios.get("/start?no=15", {}).then((res) => {
+                this.$axios.get("/start?no=6", {}).then((res) => {
                     console.log(res);
                     that.loading_start = false;
                 });
@@ -439,7 +441,7 @@ export default {
     },
     created: function() {
         const that = this;
-        this.$axios.get("/start?no=3", {}).then((res) => {
+        this.$axios.get("/start?no=6", {}).then((res) => {
             console.log(res);
         });
         this.$axios.get("/getInterface", {}).then((res) => {

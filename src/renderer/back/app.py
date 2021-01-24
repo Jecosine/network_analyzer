@@ -1,7 +1,7 @@
 '''
 Date: 2020-10-28 08:18:18
 LastEditors: Please set LastEditors
-LastEditTime: 2020-12-02 16:35:26
+LastEditTime: 2020-12-11 01:31:21
 '''
 from flask import Flask, request
 import json
@@ -34,7 +34,7 @@ def start():
     global sniffer
     no = request.args.get("no")
     try:
-        sniffer.start_sniffer(int(no))
+        sniffer.start_sniffer(6)
     except Exception as e:
         print(e)
         return json.dumps(FAILED)
@@ -77,9 +77,7 @@ def mainprocess():
             t["detail"].append({"name":"ip", "child": [{"name":i[0], "value": i[1]} for i in list(t["ip"].items()) if i[0] not in ["TCP", "UDP"]]})
             temp = t["ip"].get("TCP") or t["ip"].get("UDP")
             if temp:
-                t["detail"].append({"name":t["ip"].get("protocol")["keyword"], "child": [{"name":i[0], "value": i[1]} for i in list(temp.items())]})
-                
-                
+                t["detail"].append({"name":t["ip"].get("protocol")["keyword"], "child": [{"name":i[0], "value": i[1]} for i in list(temp.items())]})   
             # con.send(json.dumps(p.ipv4 if p.ip_version == 4 else p.ipv6))
         elif p.frame_type == "arp":
             print("===ARP===")
@@ -89,8 +87,6 @@ def mainprocess():
             # con.send(json.dumps(p.arp))
         t["ethernet"] = p.ethernet_header
         t["ethernet"]["len"] = len(raw(x))
-
-
         try:
             con.send(json.dumps(t))
         except:

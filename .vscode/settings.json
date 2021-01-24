@@ -1,5 +1,5 @@
 {
   "workbench.colorTheme": "One Dark Pro",
-  "python.pythonPath": "D:\\Anaconda3\\python.exe",
+  "python.pythonPath": "D:\\ProgramData\\Anaconda3\\python.exe",
   "python.formatting.provider": "autopep8"
 }
